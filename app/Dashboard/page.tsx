@@ -8,19 +8,7 @@ import ManageSales from './ManageSales';
 import ManageProducts from './ManageProducts';
 import ManageCompany from './ManageCompany';
 import ManageAIPersona from './ManageAi';
-
-
-const ManageConversations = () => (
-  <div className="space-y-6">
-    <div>
-      <h2 className="text-2xl font-bold text-gray-900">Manage Mira Conversations</h2>
-      <p className="text-gray-600">View and manage customer conversations with Mira AI</p>
-    </div>
-    <div className="bg-white rounded-lg shadow-sm border p-6">
-      <p className="text-gray-500">Conversation management interface coming soon...</p>
-    </div>
-  </div>
-);
+import ManageConversations from './ManageConversation';
 
 
 

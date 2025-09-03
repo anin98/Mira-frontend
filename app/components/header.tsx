@@ -25,7 +25,7 @@ const CompanyHeader: React.FC<{ companyData: CompanyData }> = ({ companyData }) 
 
   const handleLogout = () => {
     // Clear company data from localStorage
-    localStorage.removeItem('company_access_token');
+    localStorage.removeItem('access_token');
     localStorage.removeItem('company_data');
     window.location.href = '/';
   };
@@ -59,7 +59,7 @@ const CompanyHeader: React.FC<{ companyData: CompanyData }> = ({ companyData }) 
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center space-x-8">
             <Link
-              href="/company/dashboard"
+              href="/Dashboard"
               className="text-gray-600 hover:text-gray-900 transition-colors font-medium"
             >
               Dashboard
@@ -164,7 +164,7 @@ const CompanyHeader: React.FC<{ companyData: CompanyData }> = ({ companyData }) 
             <div className="flex flex-col space-y-4">
               {/* Mobile Navigation Links */}
               <Link
-                href="/company/dashboard"
+                href="/Dashboard"
                 className="text-gray-600 hover:text-gray-900 transition-colors font-medium px-2 py-1"
                 onClick={() => setIsMobileMenuOpen(false)}
               >
@@ -445,13 +445,13 @@ const Header: React.FC = () => {
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center space-x-8">
             <Link
-              href="/features"
+              href="/Features"
               className="text-gray-600 hover:text-gray-900 transition-colors font-medium"
             >
               Features
             </Link>
             <Link
-              href="/pricing"
+              href="/Pricing"
               className="text-gray-600 hover:text-gray-900 transition-colors font-medium"
             >
               Pricing

@@ -1,6 +1,7 @@
 'use client';
 import { Check, X } from 'lucide-react';
 import { Button } from '../components/ui/button';
+import { useRouter } from 'next/navigation';
 import Header from '../components/header';
 import Footer from '../components/Footer';
 
@@ -15,9 +16,12 @@ interface PlanFeature {
   buttonText: string;
   popular: boolean;
   color: string;
+  planKey: string; // Add plan key for navigation
 }
 
 const Pricing: React.FC = () => {
+  const router = useRouter();
+
   const plans: PlanFeature[] = [
     {
       name: 'Free',
@@ -39,7 +43,8 @@ const Pricing: React.FC = () => {
       ],
       buttonText: 'Get Started Free',
       popular: false,
-      color: 'border-gray-200'
+      color: 'border-gray-200',
+      planKey: 'free'
     },
     {
       name: 'Standard',
@@ -63,7 +68,8 @@ const Pricing: React.FC = () => {
       ],
       buttonText: 'Start Standard Plan',
       popular: true,
-      color: 'border-green-500'
+      color: 'border-green-500',
+      planKey: 'standard'
     },
     {
       name: 'Enterprise',
@@ -87,9 +93,20 @@ const Pricing: React.FC = () => {
       limitations: [],
       buttonText: 'Contact Sales',
       popular: false,
-      color: 'border-purple-500'
+      color: 'border-purple-500',
+      planKey: 'enterprise'
     }
   ];
+
+  const handlePlanSelect = (plan: PlanFeature) => {
+    if (plan.planKey === 'enterprise') {
+      // For enterprise, redirect to Calendly for custom consultation
+      window.open('https://calendly.com/anindita-grayscale-technologies/30min', '_blank');
+    } else {
+      // For Free and Standard plans, navigate to payment page with plan parameter
+      router.push(`/Payment?plan=${plan.planKey}`);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-white">
@@ -165,6 +182,7 @@ const Pricing: React.FC = () => {
                   </div>
 
                   <Button
+                    onClick={() => handlePlanSelect(plan)}
                     className={`w-full text-white font-medium py-3 transition-all duration-200 ${
                       plan.popular ? '' : 'bg-gray-900 hover:bg-gray-800'
                     }`}
@@ -205,8 +223,6 @@ const Pricing: React.FC = () => {
               </Button>
             </a>
           </div>
-
-         
         </div>
       </section>
 

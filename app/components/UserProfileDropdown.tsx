@@ -62,7 +62,7 @@ const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({ userData, cla
   const handleMenuClick: MenuProps['onClick'] = ({ key }) => {
     switch (key) {
       case 'dashboard':
-        router.push('/dashboard');
+        router.push('/Dashboard');
         break;
       case 'settings':
         router.push('/settings');
