@@ -469,9 +469,7 @@ const Header: React.FC = () => {
             {/* Show User Dropdown if logged in, otherwise show auth links */}
             {isLoggedIn && userData ? (
               <div className="flex items-center space-x-3">
-                <span className="hidden md:block text-sm text-gray-700">
-                  Welcome, {userData.displayName}!
-                </span>
+                
                 <UserProfileDropdown />
               </div>
             ) : (
@@ -537,9 +535,7 @@ const Header: React.FC = () => {
               {/* Mobile Auth Links or User Info */}
               {isLoggedIn && userData ? (
                 <div className="flex flex-col space-y-2 pt-4 border-t border-gray-200">
-                  <span className="text-sm text-gray-700 px-2">
-                    Welcome, {userData.displayName}!
-                  </span>
+                  
                   <div className="px-2">
                     <UserProfileDropdown />
                   </div>

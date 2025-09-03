@@ -152,9 +152,9 @@ const CustomerRegistration: React.FC = () => {
           console.log('✅ Profile data received:', profileData);
           
           if (isProfileComplete(profileData)) {
-            console.log('✅ Profile complete, redirecting home');
+            console.log('✅ Profile complete, redirecting Dashboard');
             storeProfileData(profileData);
-            window.location.href = '/';
+            window.location.href = '/Dashboard';
             return;
           } else {
             console.log('📝 Profile incomplete, showing form');
@@ -321,7 +321,7 @@ const CustomerRegistration: React.FC = () => {
               });
               
               // Use window.location.replace to avoid back button issues
-              window.location.replace('/');
+              window.location.replace('/Dashboard');
             }, 2000);
             return;
           } else {

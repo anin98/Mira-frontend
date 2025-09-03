@@ -28,15 +28,15 @@ const StatCard = ({
   color: string;
   loading: boolean;
 }) => (
-  <div className="bg-white rounded-lg shadow-sm border p-4">
+  <div className="bg-white rounded-lg shadow-sm border p-3">
     <div className="flex items-center justify-between">
-      <div>
-        <p className="text-sm font-medium text-gray-600">{title}</p>
-        <p className="text-2xl font-bold text-gray-900">
+      <div className="flex-1 min-w-0">
+        <p className="text-xs font-medium text-gray-600 truncate">{title}</p>
+        <p className="text-lg font-bold text-gray-900 mt-1">
           {loading ? "..." : value}
         </p>
       </div>
-      <Icon className={`w-8 h-8 ${color}`} />
+      <Icon className={`w-5 h-5 ${color} flex-shrink-0 ml-2`} />
     </div>
   </div>
 );
@@ -51,7 +51,7 @@ export const StatsCards: React.FC<StatsCardsProps> = ({ stats, loading }) => {
     },
     {
       title: "Revenue",
-      value: `${(stats?.total_revenue || 0).toFixed(2)}`,
+      value: `৳${(stats?.total_revenue || 0).toFixed(0)}`,
       icon: DollarSign,
       color: "text-green-600"
     },
@@ -63,7 +63,7 @@ export const StatsCards: React.FC<StatsCardsProps> = ({ stats, loading }) => {
     },
     {
       title: "Avg Order",
-      value: `${(stats?.avg_order_value || 0).toFixed(2)}`,
+      value: `৳${(stats?.avg_order_value || 0).toFixed(0)}`,
       icon: TrendingUp,
       color: "text-orange-600"
     },
@@ -82,7 +82,7 @@ export const StatsCards: React.FC<StatsCardsProps> = ({ stats, loading }) => {
   ];
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
       {cardData.map((card, index) => (
         <StatCard key={index} {...card} loading={loading} />
       ))}
