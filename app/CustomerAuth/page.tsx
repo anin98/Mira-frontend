@@ -7,6 +7,8 @@ import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
 import { Alert } from 'antd';
 import Squares from '../CompanyAuth/components/Square';
+import Header from '../components/header';
+import LoadingAnimation from '../components/LoadingAnimation';
 
 const CustomerRegistration: React.FC = () => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -14,6 +16,7 @@ const CustomerRegistration: React.FC = () => {
   const [successMessage, setSuccessMessage] = useState<string>('');
   const [isAuthChecking, setIsAuthChecking] = useState<boolean>(true);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [isNavigating, setIsNavigating] = useState<boolean>(false);
   
   // Phone verification states
   const [phoneNumber, setPhoneNumber] = useState<string>('');
@@ -152,9 +155,12 @@ const CustomerRegistration: React.FC = () => {
           console.log('✅ Profile data received:', profileData);
           
           if (isProfileComplete(profileData)) {
-            console.log('✅ Profile complete, redirecting Dashboard');
+            console.log('✅ Profile complete, redirecting to CustomerDashboard');
             storeProfileData(profileData);
-            window.location.href = '/Dashboard';
+            setIsNavigating(true);
+            setTimeout(() => {
+              window.location.href = '/CustomerDashboard';
+            }, 500);
             return;
           } else {
             console.log('📝 Profile incomplete, showing form');
@@ -308,20 +314,21 @@ const CustomerRegistration: React.FC = () => {
             
             // Store complete profile data
             storeProfileData(profileData);
-            
-            setSuccessMessage('Login successful! Redirecting to homepage...');
-            
+
+            setSuccessMessage('Login successful! Redirecting to dashboard...');
+            setIsNavigating(true);
+
             // Wait longer to ensure all data is properly stored
             setTimeout(() => {
-              console.log('🔄 Redirecting to homepage...');
+              console.log('🔄 Redirecting to CustomerDashboard...');
               console.log('Final auth check before redirect:', {
                 access_token: localStorage.getItem('access_token'),
                 userId: localStorage.getItem('userId'),
                 displayName: localStorage.getItem('displayName')
               });
-              
+
               // Use window.location.replace to avoid back button issues
-              window.location.replace('/Dashboard');
+              window.location.replace('/CustomerDashboard');
             }, 2000);
             return;
           } else {
@@ -421,20 +428,21 @@ const CustomerRegistration: React.FC = () => {
         
         // Store complete profile data
         storeProfileData(responseData);
-        
-        setSuccessMessage('Account created successfully! Redirecting to homepage...');
-        
+
+        setSuccessMessage('Account created successfully! Redirecting to dashboard...');
+        setIsNavigating(true);
+
         // Wait longer to ensure all data is properly stored
         setTimeout(() => {
-          console.log('🔄 Redirecting to homepage after registration...');
+          console.log('🔄 Redirecting to CustomerDashboard after registration...');
           console.log('Final auth check before redirect:', {
             access_token: localStorage.getItem('access_token'),
             userId: localStorage.getItem('userId'),
             displayName: localStorage.getItem('displayName')
           });
-          
+
           // Use window.location.replace to avoid back button issues
-          window.location.replace('/');
+          window.location.replace('/CustomerDashboard');
         }, 2500);
         
       } else {
@@ -458,33 +466,39 @@ const CustomerRegistration: React.FC = () => {
 
   if (isAuthChecking) {
     return (
-      <div className="min-h-screen relative flex items-center justify-center p-4">
-        <SquaresBackground />
-        <div className="absolute inset-0 bg-blue-50 bg-opacity-40" />
-        <div className="relative z-10 text-center bg-white rounded-xl p-8 shadow-lg">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Checking authentication...</p>
+      <>
+        <Header />
+        <div className="min-h-screen relative flex items-center justify-center p-4">
+          <SquaresBackground />
+          <div className="absolute inset-0 bg-blue-50 bg-opacity-40" />
+          <div className="relative z-10 text-center bg-white rounded-xl p-8 shadow-lg">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Checking authentication...</p>
+          </div>
         </div>
-      </div>
+      </>
     );
   }
 
   return (
-    <div className="min-h-screen relative flex items-center justify-center p-4">
-      <SquaresBackground />
-      <div className="absolute inset-0 bg-blue-50 bg-opacity-30" />
-      
-      <div className="relative z-10 max-w-md w-full bg-white rounded-2xl shadow-2xl border border-blue-100">
+    <>
+      <Header />
+      {isNavigating && <LoadingAnimation fullScreen message="Redirecting to dashboard..." />}
+      <div className="min-h-screen relative flex items-center justify-center p-4 py-8">
+        <SquaresBackground />
+        <div className="absolute inset-0 bg-blue-50 bg-opacity-30" />
+
+      <div className="relative z-10 max-w-md w-full bg-white rounded-2xl shadow-2xl border border-blue-100 my-8">
         <div className="p-8">
           {/* Logo */}
-          <div className="text-center mb-8 flex justify-center">
+          <div className="text-center flex justify-center">
             <Link href="/" className="inline-block">
               <Image
                 src="/mira-ai.png"
                 alt="Mira AI Logo"
                 width={150}
-                height={42}
-                className="h-12 w-auto mx-auto"
+                height={12}
+               
               />
             </Link>
           </div>
@@ -661,7 +675,7 @@ const CustomerRegistration: React.FC = () => {
                   type="email"
                   value={formData.email}
                   onChange={handleInputChange}
-                  placeholder="your@email.com"
+                  // placeholder="your@email.com"
                   className="mt-1 h-9 border-blue-200 focus:border-blue-500"
                   required
                 />
@@ -695,23 +709,10 @@ const CustomerRegistration: React.FC = () => {
               </Button>
             </form>
           )}
-
-          {/* Footer */}
-          <div className="mt-6 text-center text-sm text-gray-500">
-            <p>
-              By continuing, you agree to our{' '}
-              <a href="/terms" className="text-blue-600 hover:underline">
-                Terms of Service
-              </a>{' '}
-              and{' '}
-              <a href="/privacy" className="text-blue-600 hover:underline">
-                Privacy Policy
-              </a>
-            </p>
-          </div>
         </div>
       </div>
     </div>
+    </>
   );
 };
 

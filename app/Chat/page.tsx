@@ -52,24 +52,12 @@ const MiraChatbot: React.FC = () => {
 
   // Thinking states array
   const thinkingStates = [
-    "Thinking...",
-    "Processing your request...",
-    "Formulating response...",
-    "Analyzing your needs...",
-    "Generating solution...",
-    "Preparing information...",
-    "Understanding context...",
-    "Crafting response..."
+    "Thinking..."
   ];
 
   // Typing states for header
   const typingStatesHeader = [
-    "🤔 Mira is thinking",
-    "💭 Processing request", 
-    "📝 Formulating response",
-    "⚡ Generating solution",
-    "✨ Finalizing details",
-    "💬 Typing response"
+    "🤔 Mira is thinking"
   ];
 
   // Check if user is logged in
@@ -134,7 +122,7 @@ const MiraChatbot: React.FC = () => {
     };
   }, [isTyping]);
 
-  // Typing effect for streaming messages
+  // Monitor streaming completion
   useEffect(() => {
     if (!streamingMessageId) return;
 
@@ -142,27 +130,12 @@ const MiraChatbot: React.FC = () => {
     if (!streamingMessage || !streamingMessage.text) return;
 
     const fullText = streamingMessage.text;
-    const currentDisplayed = streamingMessage.displayedText || '';
 
-    // Skip typing effect for thinking states
+    // Skip for thinking states
     if (thinkingStates.includes(fullText)) return;
 
-    if (fullText && currentDisplayed.length < fullText.length) {
-      const timer = setTimeout(() => {
-        setMessages(prevMessages =>
-          prevMessages.map(msg =>
-            msg.id === streamingMessageId
-              ? {
-                  ...msg,
-                  displayedText: fullText.slice(0, (msg.displayedText || '').length + 1)
-                }
-              : msg
-          )
-        );
-      }, 30);
-
-      return () => clearTimeout(timer);
-    } else if (fullText && currentDisplayed.length >= fullText.length && !thinkingStates.includes(fullText)) {
+    // Check if streaming is complete (text matches displayedText)
+    if (fullText && streamingMessage.displayedText && fullText === streamingMessage.displayedText) {
       setMessages(prevMessages =>
         prevMessages.map(msg =>
           msg.id === streamingMessageId

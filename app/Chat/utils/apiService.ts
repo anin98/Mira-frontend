@@ -74,6 +74,7 @@ export class APIService {
       const reader = response.body?.getReader();
       const decoder = new TextDecoder();
       let fullResponse = '';
+      let buffer = ''; // Buffer to accumulate complete data chunks
 
       if (reader) {
         while (true) {
@@ -81,14 +82,100 @@ export class APIService {
           if (done) break;
 
           const chunk = decoder.decode(value, { stream: true });
-          fullResponse += chunk;
-          onChunk(chunk);
+          buffer += chunk;
+
+          // Parse SSE (Server-Sent Events) format
+          const lines = buffer.split('\n');
+
+          // Keep the last incomplete line in the buffer
+          buffer = lines.pop() || '';
+
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              try {
+                const jsonStr = line.substring(6); // Remove 'data: ' prefix
+                const parsed = JSON.parse(jsonStr);
+
+                // Extract text from the data object and emit character by character
+                if (parsed.type === 'text' && parsed.data) {
+                  const text = parsed.data;
+
+                  // Emit each character individually for typewriting effect
+                  for (let i = 0; i < text.length; i++) {
+                    fullResponse += text[i];
+                    onChunk(text[i]);
+
+                    // Small delay between characters for typewriting effect
+                    await new Promise(resolve => setTimeout(resolve, 20));
+                  }
+                }
+              } catch (e) {
+                // If not JSON, treat as plain text and emit character by character
+                const text = line.substring(6);
+                for (let i = 0; i < text.length; i++) {
+                  fullResponse += text[i];
+                  onChunk(text[i]);
+                  await new Promise(resolve => setTimeout(resolve, 20));
+                }
+              }
+            } else if (line.trim() && !line.startsWith(':')) {
+              // Handle non-SSE format chunks character by character
+              for (let i = 0; i < line.length; i++) {
+                fullResponse += line[i];
+                onChunk(line[i]);
+                await new Promise(resolve => setTimeout(resolve, 20));
+              }
+            }
+          }
+        }
+
+        // Process any remaining data in the buffer
+        if (buffer.trim()) {
+          if (buffer.startsWith('data: ')) {
+            try {
+              const jsonStr = buffer.substring(6);
+              const parsed = JSON.parse(jsonStr);
+              if (parsed.type === 'text' && parsed.data) {
+                const text = parsed.data;
+                for (let i = 0; i < text.length; i++) {
+                  fullResponse += text[i];
+                  onChunk(text[i]);
+                  await new Promise(resolve => setTimeout(resolve, 20));
+                }
+              }
+            } catch (e) {
+              const text = buffer.substring(6);
+              for (let i = 0; i < text.length; i++) {
+                fullResponse += text[i];
+                onChunk(text[i]);
+                await new Promise(resolve => setTimeout(resolve, 20));
+              }
+            }
+          }
         }
       }
 
       if (!fullResponse) {
         fullResponse = await response.text();
-        onChunk(fullResponse);
+
+        // Try to parse if it's SSE format
+        if (fullResponse.startsWith('data: ')) {
+          try {
+            const jsonStr = fullResponse.substring(6);
+            const parsed = JSON.parse(jsonStr);
+            if (parsed.type === 'text' && parsed.data) {
+              fullResponse = parsed.data;
+            }
+          } catch (e) {
+            // Keep original if parsing fails
+          }
+        }
+
+        // Emit character by character
+        for (let i = 0; i < fullResponse.length; i++) {
+          onChunk(fullResponse[i]);
+          await new Promise(resolve => setTimeout(resolve, 20));
+        }
       }
 
       if (!fullResponse || fullResponse.trim() === '') {

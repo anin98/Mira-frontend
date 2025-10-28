@@ -2,7 +2,9 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 import UserProfileDropdown from './UserProfileDropdown';
+import { useNavigationContext } from '../contexts/NavigationContext';
 
 interface CompanyData {
   name: string;
@@ -48,9 +50,9 @@ const CompanyHeader: React.FC<{ companyData: CompanyData }> = ({ companyData }) 
               <Image
                 src="/mira-ai.png"
                 alt="Mira AI Logo"
-                width={130}
-                height={32}
-                className="h-8 w-auto"
+                width={150}
+                height={37}
+                className="h-10 w-auto"
                 priority
               />
             </Link>
@@ -227,22 +229,61 @@ const Header: React.FC = () => {
   const [companyData, setCompanyData] = useState<CompanyData | null>(null);
   const [userData, setUserData] = useState<UserData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [hasCompany, setHasCompany] = useState(false);
+  const router = useRouter();
+  const { startNavigation } = useNavigationContext();
+
+  // Check if user has a company account
+  useEffect(() => {
+    const checkCompanyAccount = async () => {
+      try {
+        const accessToken = localStorage.getItem('access_token');
+
+        if (!accessToken) {
+          setHasCompany(false);
+          return;
+        }
+
+        const response = await fetch('https://api.grayscale-technologies.com/api/v1/companies/', {
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+          }
+        });
+
+        if (response.ok) {
+          const companies = await response.json();
+          const hasCompanyAccount = Array.isArray(companies) && companies.length > 0;
+          setHasCompany(hasCompanyAccount);
+        } else {
+          setHasCompany(false);
+        }
+      } catch (error) {
+        console.error('Error checking company account:', error);
+        setHasCompany(false);
+      }
+    };
+
+    if (isLoggedIn) {
+      checkCompanyAccount();
+    }
+  }, [isLoggedIn]);
 
   // Check login status without token verification
   useEffect(() => {
     const checkLoginStatus = async () => {
       setIsLoading(true);
-      
+
       try {
         // Check for company login first
         const companyToken = localStorage.getItem('company_access_token');
         const storedCompanyData = localStorage.getItem('company_data');
-        
-        console.log('🏢 Checking company login:', { 
-          hasToken: !!companyToken, 
-          hasData: !!storedCompanyData 
+
+        console.log('🏢 Checking company login:', {
+          hasToken: !!companyToken,
+          hasData: !!storedCompanyData
         });
-        
+
         if (companyToken && storedCompanyData) {
           try {
             const parsedCompanyData = JSON.parse(storedCompanyData);
@@ -394,6 +435,22 @@ const Header: React.FC = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen);
   };
 
+  const handleNavigation = (path: string, e: React.MouseEvent) => {
+    e.preventDefault();
+    startNavigation();
+    setTimeout(() => {
+      router.push(path);
+    }, 300);
+  };
+
+  const handleDashboardClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    startNavigation();
+    setTimeout(() => {
+      router.push('/Dashboard');
+    }, 300);
+  };
+
   // Show loading state briefly
   if (isLoading) {
     return (
@@ -406,9 +463,9 @@ const Header: React.FC = () => {
                 <Image
                   src="/mira-ai.png"
                   alt="Mira AI Logo"
-                  width={130}
-                  height={32}
-                  className="h-8 w-auto"
+                  width={150}
+                  height={37}
+                  className="h-10 w-auto"
                   priority
                 />
               </Link>
@@ -434,9 +491,9 @@ const Header: React.FC = () => {
               <Image
                 src="/mira-ai.png"
                 alt="Mira AI Logo"
-                width={130}
-                height={32}
-                className="h-8 w-auto"
+                width={150}
+                height={50}
+              
                 priority
               />
             </Link>
@@ -444,24 +501,27 @@ const Header: React.FC = () => {
 
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center space-x-8">
-            <Link
+            <a
               href="/Features"
-              className="text-gray-600 hover:text-gray-900 transition-colors font-medium"
+              onClick={(e) => handleNavigation('/Features', e)}
+              className="text-gray-600 hover:text-gray-900 transition-colors font-medium cursor-pointer"
             >
               Features
-            </Link>
-            <Link
+            </a>
+            <a
               href="/Pricing"
-              className="text-gray-600 hover:text-gray-900 transition-colors font-medium"
+              onClick={(e) => handleNavigation('/Pricing', e)}
+              className="text-gray-600 hover:text-gray-900 transition-colors font-medium cursor-pointer"
             >
               Pricing
-            </Link>
-            <Link
+            </a>
+            <a
               href="/documentation"
-              className="text-gray-600 hover:text-gray-900 transition-colors font-medium"
+              onClick={(e) => handleNavigation('/documentation', e)}
+              className="text-gray-600 hover:text-gray-900 transition-colors font-medium cursor-pointer"
             >
               Documentation
-            </Link>
+            </a>
           </nav>
 
           {/* Right Side - Auth Links or User Dropdown */}
@@ -469,17 +529,33 @@ const Header: React.FC = () => {
             {/* Show User Dropdown if logged in, otherwise show auth links */}
             {isLoggedIn && userData ? (
               <div className="flex items-center space-x-3">
-                
+                {/* Manage Dashboard Button - Only show if user has company */}
+                {hasCompany && (
+                  <button
+                    onClick={handleDashboardClick}
+                    className="hidden md:block bg-gradient-to-r from-purple-600 to-purple-700 text-white px-4 py-2 rounded-lg hover:from-purple-700 hover:to-purple-800 transition-all duration-200 font-medium"
+                  >
+                    Manage Dashboard
+                  </button>
+                )}
                 <UserProfileDropdown />
               </div>
             ) : (
               <div className="hidden md:flex items-center space-x-4">
-                <Link
+                <a
+                  href="/CompanyAuth"
+                  onClick={(e) => handleNavigation('/CompanyAuth', e)}
+                  className="bg-gradient-to-r from-purple-600 to-purple-700 text-white px-4 py-2 rounded-lg hover:from-purple-700 hover:to-purple-800 transition-all duration-200 font-medium cursor-pointer"
+                >
+                  Register your Business
+                </a>
+                <a
                   href="/CustomerAuth"
-                  className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-4 py-2 rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all duration-200 font-medium"
+                  onClick={(e) => handleNavigation('/CustomerAuth', e)}
+                  className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-4 py-2 rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all duration-200 font-medium cursor-pointer"
                 >
                   Login
-                </Link>
+                </a>
               </div>
             )}
 
@@ -510,45 +586,78 @@ const Header: React.FC = () => {
           <div className="md:hidden border-t border-gray-200 py-4">
             <div className="flex flex-col space-y-4">
               {/* Mobile Navigation Links */}
-              <Link
-                href="/features"
-                className="text-gray-600 hover:text-gray-900 transition-colors font-medium px-2 py-1"
-                onClick={() => setIsMobileMenuOpen(false)}
+              <a
+                href="/Features"
+                onClick={(e) => {
+                  setIsMobileMenuOpen(false);
+                  handleNavigation('/Features', e);
+                }}
+                className="text-gray-600 hover:text-gray-900 transition-colors font-medium px-2 py-1 cursor-pointer"
               >
                 Features
-              </Link>
-              <Link
-                href="/pricing"
-                className="text-gray-600 hover:text-gray-900 transition-colors font-medium px-2 py-1"
-                onClick={() => setIsMobileMenuOpen(false)}
+              </a>
+              <a
+                href="/Pricing"
+                onClick={(e) => {
+                  setIsMobileMenuOpen(false);
+                  handleNavigation('/Pricing', e);
+                }}
+                className="text-gray-600 hover:text-gray-900 transition-colors font-medium px-2 py-1 cursor-pointer"
               >
                 Pricing
-              </Link>
-              <Link
+              </a>
+              <a
                 href="/documentation"
-                className="text-gray-600 hover:text-gray-900 transition-colors font-medium px-2 py-1"
-                onClick={() => setIsMobileMenuOpen(false)}
+                onClick={(e) => {
+                  setIsMobileMenuOpen(false);
+                  handleNavigation('/documentation', e);
+                }}
+                className="text-gray-600 hover:text-gray-900 transition-colors font-medium px-2 py-1 cursor-pointer"
               >
                 Documentation
-              </Link>
+              </a>
 
               {/* Mobile Auth Links or User Info */}
               {isLoggedIn && userData ? (
                 <div className="flex flex-col space-y-2 pt-4 border-t border-gray-200">
-                  
+                  {/* Manage Dashboard Button - Only show if user has company */}
+                  {hasCompany && (
+                    <button
+                      onClick={(e) => {
+                        setIsMobileMenuOpen(false);
+                        handleDashboardClick(e);
+                      }}
+                      className="bg-gradient-to-r from-purple-600 to-purple-700 text-white px-4 py-2 rounded-lg hover:from-purple-700 hover:to-purple-800 transition-all duration-200 font-medium text-center"
+                    >
+                      Manage Dashboard
+                    </button>
+                  )}
                   <div className="px-2">
                     <UserProfileDropdown />
                   </div>
                 </div>
               ) : (
                 <div className="flex flex-col space-y-2 pt-4 border-t border-gray-200">
-                  <Link
+                  <a
+                    href="/CompanyAuth"
+                    onClick={(e) => {
+                      setIsMobileMenuOpen(false);
+                      handleNavigation('/CompanyAuth', e);
+                    }}
+                    className="bg-gradient-to-r from-purple-600 to-purple-700 text-white px-4 py-2 rounded-lg hover:from-purple-700 hover:to-purple-800 transition-all duration-200 font-medium text-center cursor-pointer"
+                  >
+                    Join as Company
+                  </a>
+                  <a
                     href="/CustomerAuth"
-                    className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-4 py-2 rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all duration-200 font-medium text-center"
-                    onClick={() => setIsMobileMenuOpen(false)}
+                    onClick={(e) => {
+                      setIsMobileMenuOpen(false);
+                      handleNavigation('/CustomerAuth', e);
+                    }}
+                    className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-4 py-2 rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all duration-200 font-medium text-center cursor-pointer"
                   >
                     Login
-                  </Link>
+                  </a>
                 </div>
               )}
             </div>

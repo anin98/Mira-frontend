@@ -1,8 +1,9 @@
 import { ArrowRight, Play } from 'lucide-react';
+import { useState } from 'react';
 import { Button } from './ui/button';
 import { useEffect, useRef } from 'react';
 import Link from 'next/link';
-
+import LoadingAnimation from './LoadingAnimation';
 // Type definition for Lottie animation instance
 interface LottieAnimationItem {
   destroy: () => void;
@@ -10,6 +11,8 @@ interface LottieAnimationItem {
 
 const Hero: React.FC = () => {
   const animationContainer = useRef<HTMLDivElement>(null);
+    const [isNavigating, setIsNavigating] = useState<boolean>(false);
+  
 
   useEffect(() => {
     let animationInstance: LottieAnimationItem | null = null;
@@ -90,7 +93,9 @@ const Hero: React.FC = () => {
   }, []);
 
   return (
-    <section id="home" className="pt-16 min-h-screen flex items-center bg-gradient-to-br from-background via-muted/50 to-background">
+    <>
+      {isNavigating && <LoadingAnimation fullScreen message="Redirecting to MIRA AI Chat..." />}
+      <section id="home" className="pt-16 min-h-screen flex items-center bg-gradient-to-br from-background via-muted/50 to-background">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
         <div className="grid lg:grid-cols-2 gap-12 items-center">
           {/* Left Content */}
@@ -121,7 +126,7 @@ const Hero: React.FC = () => {
               </Link>
               
               {/* Try Demo Button with standard styling */}
-              <Link href="/Chat">
+              <Link href="/Chat" onClick={() => setIsNavigating(true)}>
                 <Button
                   size="lg"
                   variant="outline"
@@ -147,7 +152,8 @@ const Hero: React.FC = () => {
           </div>
         </div>
       </div>
-    </section>
+      </section>
+    </>
   );
 };
 

@@ -4,27 +4,14 @@ import React from 'react';
 import { Card, Avatar, Button, Tag } from 'antd';
 import { UserOutlined, RobotOutlined, QrcodeOutlined, CheckCircleOutlined } from '@ant-design/icons';
 import ClientTime from './ClientTime';
+import { MessageComponentProps } from './chatIndex';
 
-interface MessageComponentProps {
-  message: {
-    id: string;
-    text: string;
-    sender: "user" | "bot";
-    timestamp: Date;
-    isStreaming?: boolean;
-    displayedText?: string;
-    hasPaymentImage?: boolean;
-  };
-  formatMessage: (text: string) => string;
-  storedQRUrl?: string;
-  paymentCompleted?: boolean;
-}
-
-const MessageComponent: React.FC<MessageComponentProps> = ({ 
-  message, 
-  formatMessage, 
+const MessageComponent: React.FC<MessageComponentProps> = ({
+  message,
+  formatMessage,
   storedQRUrl = "",
-  paymentCompleted = false
+  paymentCompleted = false,
+  isThinking = false
 }) => {
   const displayText = message.displayedText || message.text || "";
   

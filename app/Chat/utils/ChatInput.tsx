@@ -5,12 +5,13 @@ import { Card, Input, Button, Space, Alert } from 'antd';
 import { SendOutlined, LoadingOutlined } from '@ant-design/icons';
 import { ChatInputProps } from './chatIndex';
 
-const ChatInput: React.FC<ChatInputProps> = ({ 
-  inputMessage, 
-  setInputMessage, 
-  onSendMessage, 
-  isTyping, 
-  error 
+const ChatInput: React.FC<ChatInputProps> = ({
+  inputMessage,
+  setInputMessage,
+  onSendMessage,
+  isTyping,
+  error,
+  typingState
 }) => {
   const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {

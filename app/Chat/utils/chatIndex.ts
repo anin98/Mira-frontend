@@ -38,6 +38,8 @@ export interface PaymentImageModalProps {
 export interface ChatHeaderProps {
   isLoggedIn: boolean;
   hasError: boolean;
+  typingState?: string;
+  isTyping?: boolean;
 }
 
 export interface MessageComponentProps {
@@ -45,6 +47,7 @@ export interface MessageComponentProps {
   formatMessage: (text: string) => string;
   storedQRUrl?: string;
   paymentCompleted?: boolean;
+  isThinking?: boolean;
 }
 
 export interface ChatInputProps {
@@ -53,6 +56,7 @@ export interface ChatInputProps {
   onSendMessage: () => void;
   isTyping: boolean;
   error: string;
+  typingState?: string;
 }
 
 // New interfaces for QR management

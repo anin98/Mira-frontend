@@ -2,6 +2,7 @@
 import './global.css'; // Changed from './globals.css' to './global.css'
 import { Inter } from 'next/font/google';
 import ReactQueryProviders from './components/providers';
+import { NavigationProvider } from './contexts/NavigationContext';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -19,7 +20,9 @@ export default function RootLayout({
     <html lang="en">
       <body className={inter.className}>
         <ReactQueryProviders>
-          {children}
+          <NavigationProvider>
+            {children}
+          </NavigationProvider>
         </ReactQueryProviders>
       </body>
     </html>

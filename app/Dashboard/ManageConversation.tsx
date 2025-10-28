@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   MessageSquare, 
   Send, 
@@ -27,6 +27,7 @@ interface Message {
 
 interface Conversation {
   id: string;
+  session_id?: string;
   customer_name?: string;
   customer_phone?: string;
   status: 'active' | 'closed' | 'autopilot';
@@ -37,6 +38,21 @@ interface Conversation {
   mode: 'manual' | 'autopilot';
   messages?: Message[];
 }
+
+// API Response Types
+interface InboxResponse {
+  id?: string;
+  session_id?: string;
+  customer_name?: string;
+  customer_phone?: string;
+  status?: string;
+  created_at?: string;
+  updated_at?: string;
+  message_count?: number;
+  last_message?: string;
+  mode?: string;
+}
+
 
 // Button Component
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
@@ -107,6 +123,31 @@ const Modal: React.FC<{
   );
 };
 
+// Alert Component
+const Alert: React.FC<{
+  type: 'error' | 'success';
+  message: string;
+  onClose: () => void;
+}> = ({ type, message, onClose }) => {
+  const styles = type === 'error' 
+    ? 'bg-red-50 border-red-200 text-red-800'
+    : 'bg-green-50 border-green-200 text-green-800';
+  
+  const Icon = type === 'error' ? AlertCircle : CheckCircle;
+
+  return (
+    <div className={`flex items-center justify-between p-4 rounded-lg border ${styles} mb-6`}>
+      <div className="flex items-center">
+        <Icon className="w-5 h-5 mr-3" />
+        <span className="text-sm font-medium">{message}</span>
+      </div>
+      <button onClick={onClose} className="text-current hover:opacity-70">
+        <X className="w-4 h-4" />
+      </button>
+    </div>
+  );
+};
+
 // Message Component
 const MessageBubble: React.FC<{ message: Message }> = ({ message }) => {
   const isUser = message.sender === 'user';
@@ -151,26 +192,30 @@ const ManageConversations: React.FC = () => {
   const [success, setSuccess] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [actionLoading, setActionLoading] = useState(false);
   
   // Modal states
   const [showConversationModal, setShowConversationModal] = useState(false);
   const [newMessage, setNewMessage] = useState('');
   const [sendingMessage, setSendingMessage] = useState(false);
 
+  // Ref for auto-scrolling messages
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
   // API Base URL
   const API_BASE = 'https://api.grayscale-technologies.com/api';
 
   // Get auth token
-  const getAuthToken = () => localStorage.getItem('access_token');
+  const getAuthToken = () => {
+    const token = localStorage.getItem('access_token');
+    if (!token) {
+      throw new Error('Authentication token not found. Please log in again.');
+    }
+    return token;
+  };
 
   // Get auth headers
   const getAuthHeaders = (): HeadersInit => {
     const token = getAuthToken();
-    if (!token) {
-      throw new Error('Authentication token not found. Please log in again.');
-    }
-    
     return {
       'Authorization': `Bearer ${token}`,
       'Content-Type': 'application/json',
@@ -186,205 +231,198 @@ const ManageConversations: React.FC = () => {
   // Show success message
   const showSuccess = (message: string) => {
     setSuccess(message);
-    setTimeout(() => setSuccess(null), 3000);
+    setTimeout(() => setSuccess(null), 5000);
   };
 
-  // Fetch conversations list - replace with actual endpoint when available
+  // Show error message
+  const showError = (message: string) => {
+    setError(message);
+    setTimeout(() => setError(null), 8000);
+  };
+
+  // Scroll to bottom of messages
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [selectedConversation?.messages]);
+
+  // Fetch conversations from inbox endpoint
   const fetchConversations = async () => {
     try {
       setLoading(true);
       clearMessages();
       
-      // Replace this URL with your actual conversations list endpoint
-      const response = await fetch(`${API_BASE}/dashboard/conversations/`, {
+      const response = await fetch(`${API_BASE}/dashboard/inbox/`, {
+        method: 'GET',
         headers: getAuthHeaders(),
       });
       
-      // For now, set empty array until you provide the conversations list endpoint
-      setConversations([]);
+      if (!response.ok) {
+        if (response.status === 401) {
+          localStorage.removeItem('access_token');
+          showError('Session expired. Please log in again.');
+          // Redirect to login page
+          window.location.href = '/login';
+          return;
+        }
+        throw new Error(`Failed to fetch conversations: ${response.status}`);
+      }
+      
+      const data: InboxResponse[] = await response.json();
+      
+      // Map inbox data to conversations format
+      const mappedConversations: Conversation[] = data.map((item) => ({
+        id: item.session_id || item.id || '',
+        session_id: item.session_id || item.id,
+        customer_name: item.customer_name || 'Unknown Customer',
+        customer_phone: item.customer_phone || 'No phone',
+        status: (item.status as 'active' | 'closed' | 'autopilot') || 'active',
+        created_at: item.created_at || new Date().toISOString(),
+        updated_at: item.updated_at || new Date().toISOString(),
+        message_count: item.message_count || 0,
+        last_message: item.last_message || 'No messages',
+        mode: (item.mode as 'manual' | 'autopilot') || 'manual',
+      }));
+      
+      setConversations(mappedConversations);
+      
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch conversations');
+      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch conversations';
+      showError(errorMessage);
+      console.error('Error fetching conversations:', err);
     } finally {
       setLoading(false);
     }
   };
 
   // Fetch conversation details and messages
-  const fetchConversationDetails = async (conversationId: string) => {
+  const fetchConversationDetails = async (sessionId: string) => {
     try {
       setConversationLoading(true);
       clearMessages();
-      
-      const response = await fetch(`${API_BASE}/dashboard/1/conversation/`, {
+
+      // Use the new messages-latest endpoint for ordered messages
+      const response = await fetch(`${API_BASE}/dashboard/${sessionId}/messages-latest/`, {
+        method: 'GET',
         headers: getAuthHeaders(),
       });
 
-      if (response.status === 401) {
-        throw new Error('Your session has expired. Please log in again.');
-      }
-
       if (!response.ok) {
-        const errorData = await response.json().catch(() => null);
-        throw new Error(errorData?.message || `Failed to fetch conversation details (${response.status})`);
+        throw new Error(`Failed to fetch conversation details: ${response.status}`);
       }
 
       const data = await response.json();
-      
-      // Update selected conversation with full details
-      if (selectedConversation && selectedConversation.id === conversationId) {
-        setSelectedConversation({
-          ...selectedConversation,
-          messages: data.messages || [],
-          ...data // Merge any other details from the response
-        });
-      }
-      
-      return data;
+
+      // Map the new API response format to our Message type
+      const messages: Message[] = Array.isArray(data) ? data.map((msg: any) => ({
+        id: msg.id,
+        content: msg.content,
+        sender: msg.role === 'user' ? 'user' : msg.role === 'assistant' ? 'ai' : msg.role === 'suggestion' ? 'ai' : 'agent',
+        timestamp: msg.created_at,
+        message_type: 'text'
+      })) : [];
+
+      // Update selected conversation with messages
+      setSelectedConversation(prev => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          messages
+        };
+      });
+
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch conversation details');
-      throw err;
+      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch conversation details';
+      showError(errorMessage);
+      console.error('Error fetching conversation details:', err);
     } finally {
       setConversationLoading(false);
     }
   };
 
-  // Handle opening conversation modal
+  // Open conversation modal
   const openConversationModal = async (conversation: Conversation) => {
     setSelectedConversation(conversation);
     setShowConversationModal(true);
     
-    // Fetch full conversation details including messages
-    try {
-      await fetchConversationDetails(conversation.id);
-    } catch (err) {
-      console.error('Failed to fetch conversation details:', err);
+    // Fetch messages
+    const sessionId = conversation.session_id || conversation.id;
+    if (sessionId) {
+      await fetchConversationDetails(sessionId);
     }
   };
 
-  // Send message to conversation
-  const sendMessage = async (conversationId: string, message: string) => {
+  // Send message
+  const handleSendMessage = async () => {
+    if (!selectedConversation || !newMessage.trim()) return;
+    
+    const messageContent = newMessage.trim();
+    const sessionId = selectedConversation.session_id || selectedConversation.id;
+    
     try {
       setSendingMessage(true);
       clearMessages();
       
-      const response = await fetch(`${API_BASE}/dashboard/${conversationId}/send-message/`, {
+      const response = await fetch(`${API_BASE}/chat/reply/`, {
         method: 'POST',
         headers: getAuthHeaders(),
-        body: JSON.stringify({ 
-          message: message,
+        body: JSON.stringify({
+          session_id: sessionId,
+          message: messageContent,
           sender: 'agent'
         }),
       });
-
-      if (response.status === 401) {
-        throw new Error('Your session has expired. Please log in again.');
-      }
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => null);
-        throw new Error(errorData?.message || 'Failed to send message');
-      }
-
-      // Add message to local state immediately for better UX
-      if (selectedConversation) {
-        const newMsg: Message = {
-          content: message,
-          sender: 'agent',
-          timestamp: new Date().toISOString()
-        };
-        
-        setSelectedConversation({
-          ...selectedConversation,
-          messages: [...(selectedConversation.messages || []), newMsg]
-        });
-      }
-
-      setNewMessage('');
-      showSuccess('Message sent successfully!');
       
-      // Refresh conversation details
-      if (selectedConversation) {
-        setTimeout(() => {
-          fetchConversationDetails(selectedConversation.id);
-        }, 1000);
+      if (!response.ok) {
+        throw new Error(`Failed to send message: ${response.status}`);
       }
+      
+      const result = await response.json();
+      
+      // Add message to UI immediately for better UX
+      const newMsg: Message = {
+        id: result.id || Date.now(),
+        content: messageContent,
+        sender: 'agent',
+        timestamp: new Date().toISOString(),
+        message_type: 'text'
+      };
+      
+      setSelectedConversation(prev => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          messages: [...(prev.messages || []), newMsg]
+        };
+      });
+      
+      setNewMessage('');
+      showSuccess('Message sent successfully');
+      
+      // Optionally refresh conversation list to update last_message
+      await fetchConversations();
+      
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to send message');
+      const errorMessage = err instanceof Error ? err.message : 'Failed to send message';
+      showError(errorMessage);
+      console.error('Error sending message:', err);
     } finally {
       setSendingMessage(false);
     }
   };
 
-  // Switch conversation to autopilot mode
-  const switchToAutopilot = async (conversationId: string) => {
-    try {
-      setActionLoading(true);
-      clearMessages();
-      
-      const response = await fetch(`${API_BASE}/dashboard/1/switch-mode/`, {
-        method: 'POST',
-        headers: getAuthHeaders(),
-      });
-
-      if (response.status === 401) {
-        throw new Error('Your session has expired. Please log in again.');
-      }
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => null);
-        throw new Error(errorData?.message || 'Failed to switch to autopilot mode');
-      }
-
-      // Update local state
-      setConversations(prev => prev.map(conv => 
-        conv.id === conversationId 
-          ? { ...conv, mode: 'autopilot', status: 'autopilot' }
-          : conv
-      ));
-
-      if (selectedConversation && selectedConversation.id === conversationId) {
-        setSelectedConversation({
-          ...selectedConversation,
-          mode: 'autopilot',
-          status: 'autopilot'
-        });
-      }
-
-      showSuccess('Conversation switched to autopilot mode!');
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to switch to autopilot mode');
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  // Handle send message
-  const handleSendMessage = () => {
-    if (!selectedConversation || !newMessage.trim()) return;
-    sendMessage(selectedConversation.id, newMessage.trim());
-  };
-
-  // Handle key press in message input
-  const handleKeyPress = (e: React.KeyboardEvent) => {
+  // Handle Enter key press
+  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSendMessage();
     }
   };
 
-  useEffect(() => {
-    fetchConversations();
-  }, []);
-
-  // Filter conversations
-  const filteredConversations = conversations.filter(conv => {
-    const matchesSearch = conv.customer_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         conv.customer_phone?.includes(searchTerm) ||
-                         conv.last_message?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesFilter = statusFilter === 'all' || conv.status === statusFilter;
-    return matchesSearch && matchesFilter;
-  });
-
+  // Get status badge
   const getStatusBadge = (status: string, mode: string) => {
     if (mode === 'autopilot') {
       return (
@@ -394,79 +432,111 @@ const ManageConversations: React.FC = () => {
         </span>
       );
     }
-    
-    switch (status) {
-      case 'active':
-        return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-            <CheckCircle className="w-3 h-3 mr-1" />
-            Active
-          </span>
-        );
-      case 'closed':
-        return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-            <Clock className="w-3 h-3 mr-1" />
-            Closed
-          </span>
-        );
-      default:
-        return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-            <MessageCircle className="w-3 h-3 mr-1" />
-            {status}
-          </span>
-        );
-    }
+
+    const statusConfig = {
+      active: {
+        color: 'bg-green-100 text-green-800',
+        icon: MessageCircle,
+        label: 'Active'
+      },
+      closed: {
+        color: 'bg-gray-100 text-gray-800',
+        icon: CheckCircle,
+        label: 'Closed'
+      },
+      autopilot: {
+        color: 'bg-purple-100 text-purple-800',
+        icon: Zap,
+        label: 'Autopilot'
+      }
+    };
+
+    const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.active;
+    const Icon = config.icon;
+
+    return (
+      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${config.color}`}>
+        <Icon className="w-3 h-3 mr-1" />
+        {config.label}
+      </span>
+    );
   };
 
+  // Filter conversations
+  const filteredConversations = conversations.filter(conv => {
+    const matchesSearch = 
+      conv.customer_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      conv.customer_phone?.includes(searchTerm) ||
+      conv.last_message?.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesStatus = 
+      statusFilter === 'all' ||
+      (statusFilter === 'autopilot' && conv.mode === 'autopilot') ||
+      (statusFilter !== 'autopilot' && conv.status === statusFilter);
+    
+    return matchesSearch && matchesStatus;
+  });
+
+  // Initial load
+  useEffect(() => {
+    fetchConversations();
+  }, []);
+
+  // Refresh conversations every 30 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetchConversations();
+    }, 30000);
+
+    return () => clearInterval(interval);
+  }, []);
+
   return (
-    <div className="space-y-6">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Header */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900">Manage Conversations</h2>
-          <p className="text-gray-600">View and manage customer conversations with Mira AI</p>
+      <div className="mb-8">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Manage Conversations</h1>
+            <p className="mt-2 text-sm text-gray-600">
+              View and manage customer conversations with your AI assistant
+            </p>
+          </div>
+          <Button
+            onClick={fetchConversations}
+            disabled={loading}
+            variant="outline"
+          >
+            <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
         </div>
-        <Button onClick={fetchConversations} disabled={loading}>
-          <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-          Refresh
-        </Button>
       </div>
 
-      {/* Success Message */}
-      {success && (
-        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-          <div className="flex items-center">
-            <CheckCircle className="w-5 h-5 text-green-600 mr-2" />
-            <p className="text-green-600">{success}</p>
-          </div>
-        </div>
-      )}
-
-      {/* Error Display */}
+      {/* Alerts */}
       {error && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-          <div className="flex items-center">
-            <AlertCircle className="w-5 h-5 text-red-600 mr-2" />
-            <p className="text-red-600">{error}</p>
-          </div>
-        </div>
+        <Alert type="error" message={error} onClose={() => setError(null)} />
+      )}
+      {success && (
+        <Alert type="success" message={success} onClose={() => setSuccess(null)} />
       )}
 
       {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+      <div className="mb-6 space-y-4">
+        {/* Search */}
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
           <input
             type="text"
-            placeholder="Search conversations..."
+            placeholder="Search by customer name, phone, or message..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           />
         </div>
-        <div className="flex gap-2">
+
+        {/* Status filters */}
+        <div className="flex flex-wrap gap-2">
           <Button
             variant={statusFilter === 'all' ? "default" : "outline"}
             onClick={() => setStatusFilter('all')}
@@ -507,7 +577,11 @@ const ManageConversations: React.FC = () => {
         <div className="text-center py-12">
           <MessageSquare className="w-12 h-12 text-gray-400 mx-auto mb-4" />
           <h3 className="text-lg font-medium text-gray-900 mb-2">No conversations found</h3>
-          <p className="text-gray-600">Conversations will appear here when customers start chatting with your AI assistant</p>
+          <p className="text-gray-600">
+            {searchTerm || statusFilter !== 'all'
+              ? 'Try adjusting your search or filters'
+              : 'Conversations will appear here when customers start chatting with your AI assistant'}
+          </p>
         </div>
       ) : (
         <div className="bg-white shadow rounded-lg overflow-hidden">
@@ -564,28 +638,17 @@ const ManageConversations: React.FC = () => {
                       {getStatusBadge(conversation.status, conversation.mode)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {new Date(conversation.updated_at).toLocaleDateString()}
+                      {new Date(conversation.updated_at).toLocaleDateString()} {new Date(conversation.updated_at).toLocaleTimeString()}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <div className="flex space-x-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => openConversationModal(conversation)}
-                        >
-                          <MessageSquare className="w-4 h-4" />
-                        </Button>
-                        {conversation.mode !== 'autopilot' && (
-                          <Button
-                            variant="success"
-                            size="sm"
-                            onClick={() => switchToAutopilot(conversation.id)}
-                            disabled={actionLoading}
-                          >
-                            <Zap className="w-4 h-4" />
-                          </Button>
-                        )}
-                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => openConversationModal(conversation)}
+                        title="View conversation"
+                      >
+                        <MessageSquare className="w-4 h-4" />
+                      </Button>
                     </td>
                   </tr>
                 ))}
@@ -607,40 +670,49 @@ const ManageConversations: React.FC = () => {
         size="large"
       >
         {selectedConversation && (
-          <div className="flex flex-col h-96">
+          <div className="flex flex-col h-[600px]">
             {/* Conversation Header */}
             <div className="flex items-center justify-between pb-4 border-b">
               <div className="flex items-center">
-                <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center mr-3">
-                  <User className="w-4 h-4 text-blue-600" />
+                <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center mr-3">
+                  <User className="w-5 h-5 text-blue-600" />
                 </div>
                 <div>
-                  <div className="font-medium">{selectedConversation.customer_name}</div>
+                  <div className="font-medium text-lg">{selectedConversation.customer_name}</div>
                   <div className="text-sm text-gray-500">{selectedConversation.customer_phone}</div>
                 </div>
               </div>
-              {getStatusBadge(selectedConversation.status, selectedConversation.mode)}
+              <div className="flex items-center space-x-3">
+                {getStatusBadge(selectedConversation.status, selectedConversation.mode)}
+                <span className="text-xs text-gray-500">
+                  {selectedConversation.message_count || 0} messages
+                </span>
+              </div>
             </div>
 
             {/* Messages Area */}
-            <div className="flex-1 overflow-y-auto py-4">
+            <div className="flex-1 overflow-y-auto py-4 space-y-2">
               {conversationLoading ? (
                 <div className="flex justify-center py-8">
                   <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
                 </div>
               ) : selectedConversation.messages && selectedConversation.messages.length > 0 ? (
-                selectedConversation.messages.map((message, index) => (
-                  <MessageBubble key={message.id || index} message={message} />
-                ))
+                <>
+                  {selectedConversation.messages.map((message, index) => (
+                    <MessageBubble key={message.id || index} message={message} />
+                  ))}
+                  <div ref={messagesEndRef} />
+                </>
               ) : (
                 <div className="text-center text-gray-500 py-8">
-                  No messages in this conversation yet
+                  <MessageSquare className="w-12 h-12 text-gray-300 mx-auto mb-2" />
+                  <p>No messages in this conversation yet</p>
                 </div>
               )}
             </div>
 
             {/* Message Input */}
-            {selectedConversation.mode !== 'autopilot' && (
+            {selectedConversation.mode !== 'autopilot' ? (
               <div className="pt-4 border-t">
                 <div className="flex space-x-2">
                   <input
@@ -649,40 +721,35 @@ const ManageConversations: React.FC = () => {
                     onChange={(e) => setNewMessage(e.target.value)}
                     onKeyPress={handleKeyPress}
                     placeholder="Type your message..."
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     disabled={sendingMessage}
                   />
                   <Button
                     onClick={handleSendMessage}
                     disabled={sendingMessage || !newMessage.trim()}
                   >
-                    <Send className="w-4 h-4" />
+                    {sendingMessage ? (
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+                    ) : (
+                      <Send className="w-4 h-4" />
+                    )}
                   </Button>
                 </div>
-                {selectedConversation.mode === 'manual' && (
-                  <div className="mt-2">
-                    <Button
-                      variant="success"
-                      size="sm"
-                      onClick={() => switchToAutopilot(selectedConversation.id)}
-                      disabled={actionLoading}
-                    >
-                      <Zap className="w-4 h-4 mr-2" />
-                      Switch to Autopilot
-                    </Button>
-                  </div>
-                )}
               </div>
-            )}
-            
-            {selectedConversation.mode === 'autopilot' && (
+            ) : (
               <div className="pt-4 border-t">
-                <div className="bg-purple-50 border border-purple-200 rounded-lg p-3">
-                  <div className="flex items-center">
-                    <Zap className="w-4 h-4 text-purple-600 mr-2" />
-                    <span className="text-sm text-purple-800">
-                      This conversation is in autopilot mode. The AI is handling responses automatically.
-                    </span>
+                <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                  <div className="flex items-start">
+                    <Zap className="w-5 h-5 text-purple-600 mr-3 mt-0.5" />
+                    <div>
+                      <p className="text-sm font-medium text-purple-900 mb-1">
+                        Autopilot Mode Active
+                      </p>
+                      <p className="text-sm text-purple-700">
+                        This conversation is in autopilot mode. The AI is handling responses automatically.
+                        Manual messaging is disabled.
+                      </p>
+                    </div>
                   </div>
                 </div>
               </div>

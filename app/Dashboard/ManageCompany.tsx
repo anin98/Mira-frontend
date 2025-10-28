@@ -1,20 +1,21 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { 
-  Building2, 
-  User, 
-  Mail, 
-  Phone, 
-  Globe, 
-  Truck, 
-  CreditCard, 
+import {
+  Building2,
+  User,
+  Mail,
+  Phone,
+  Globe,
+  Truck,
+  CreditCard,
   MapPin,
   AlertCircle,
   CheckCircle,
   Save,
   Edit,
-  X
+  X,
+  Zap
 } from 'lucide-react';
 
 // Types based on API documentation
@@ -39,6 +40,7 @@ interface Company {
   delivery_scope: 'dhaka_only' | 'NATIONWIDE';
   delivery_charge_inside_dhaka: number;
   delivery_charge_outside_dhaka: number;
+  copilot_mode?: boolean;
 }
 
 // Button Component
@@ -137,6 +139,7 @@ const ManageCompany: React.FC = () => {
   const [success, setSuccess] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [saveLoading, setSaveLoading] = useState(false);
+  const [copilotLoading, setCopilotLoading] = useState(false);
 
   // API Base URL
   const API_BASE = 'https://api.grayscale-technologies.com/api';
@@ -203,7 +206,7 @@ const ManageCompany: React.FC = () => {
         throw new Error('Company ID not found. Please log in again.');
       }
 
-      const response = await fetch(`${API_BASE}/v1/companies/${companyId}/`, {
+      const response = await fetch(`${API_BASE}/v1/companies/`, {
         method: 'PATCH',
         headers: getAuthHeaders(),
         body: JSON.stringify(updatedData),
@@ -236,6 +239,62 @@ const ManageCompany: React.FC = () => {
   const handleSave = () => {
     if (!company) return;
     updateCompany(company);
+  };
+
+  // Toggle copilot mode
+  const toggleCopilotMode = async () => {
+    try {
+      setCopilotLoading(true);
+      setError(null);
+      setSuccess(null);
+
+      const companyId = getCompanyId();
+      if (!companyId) {
+        throw new Error('Company ID not found. Please log in again.');
+      }
+
+      // Call the switch-mode API
+      const response = await fetch(`${API_BASE}/dashboard/${companyId}/switch-mode/`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+      });
+
+      if (response.status === 401) {
+        throw new Error('Your session has expired. Please log in again.');
+      }
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null);
+        throw new Error(errorData?.message || `Failed to switch copilot mode (${response.status})`);
+      }
+
+      await response.json();
+
+      // Update local state - toggle the current mode
+      const currentMode = company?.copilot_mode || false;
+      const newMode = !currentMode;
+
+      setCompany(prev => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          copilot_mode: newMode
+        };
+      });
+
+      setSuccess(`Successfully switched to ${newMode ? 'Autopilot' : 'Manual'} mode!`);
+
+      // Clear success message after 3 seconds
+      setTimeout(() => setSuccess(null), 3000);
+
+      // Refresh company data to ensure we have the latest state
+      await fetchCompany();
+
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to switch copilot mode');
+    } finally {
+      setCopilotLoading(false);
+    }
   };
 
   // Handle form field changes
@@ -551,6 +610,74 @@ const ManageCompany: React.FC = () => {
                   min={0}
                   max={2147483647}
                 />
+              </div>
+            </div>
+          </div>
+
+          {/* Copilot Mode Settings */}
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+              <Zap className="w-5 h-5 mr-2" />
+              Copilot Mode
+            </h3>
+            <div className="bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-lg p-6">
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <div className="flex items-center mb-2">
+                    <h4 className="text-base font-semibold text-gray-900">
+                      Current Mode: {company.copilot_mode ? (
+                        <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-purple-100 text-purple-800 ml-2">
+                          <Zap className="w-4 h-4 mr-1" />
+                          Autopilot
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800 ml-2">
+                          Manual
+                        </span>
+                      )}
+                    </h4>
+                  </div>
+                  <p className="text-sm text-gray-700 mb-4">
+                    {company.copilot_mode ? (
+                      <>
+                        <strong>Autopilot mode is active.</strong> The AI is automatically handling all customer conversations
+                        without requiring manual intervention. Agents cannot send manual messages.
+                      </>
+                    ) : (
+                      <>
+                        <strong>Manual mode is active.</strong> Agents can manually respond to customer conversations.
+                        The AI provides suggestions but does not send automatic responses.
+                      </>
+                    )}
+                  </p>
+                  <div className="bg-white/60 rounded-md p-3 text-sm text-gray-600">
+                    <p className="mb-1"><strong>💡 Tip:</strong></p>
+                    <ul className="list-disc list-inside space-y-1 ml-2">
+                      <li><strong>Autopilot:</strong> Best for high-volume, 24/7 automated support</li>
+                      <li><strong>Manual:</strong> Best for personalized, human-led conversations</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+              <div className="mt-4 pt-4 border-t border-purple-200">
+                <Button
+                  onClick={toggleCopilotMode}
+                  disabled={copilotLoading}
+                  variant={company.copilot_mode ? "outline" : "default"}
+                  className={company.copilot_mode ? "bg-purple-600 text-white hover:bg-purple-700" : ""}
+                >
+                  {copilotLoading ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
+                      Switching...
+                    </>
+                  ) : (
+                    <>
+                      <Zap className="w-4 h-4 mr-2" />
+                      Switch to {company.copilot_mode ? 'Manual' : 'Autopilot'} Mode
+                    </>
+                  )}
+                </Button>
               </div>
             </div>
           </div>

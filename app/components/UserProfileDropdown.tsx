@@ -1,7 +1,7 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import { Dropdown, Avatar } from 'antd';
-import { UserOutlined, DashboardOutlined, LogoutOutlined, SettingOutlined } from '@ant-design/icons';
+import { UserOutlined, LogoutOutlined, EditOutlined } from '@ant-design/icons';
 import type { MenuProps } from 'antd';
 import { useRouter } from 'next/navigation';
 
@@ -27,10 +27,10 @@ const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({ userData, cla
     if (userData) {
       // Use userData prop if provided
       const displayName = userData.displayName || `${userData.firstName} ${userData.lastName}`.trim();
-      const initials = userData.displayName 
+      const initials = userData.displayName
         ? userData.displayName.charAt(0).toUpperCase()
         : `${userData.firstName.charAt(0)}${userData.lastName.charAt(0)}`.toUpperCase();
-      
+
       setUserName(displayName);
       setUserInitials(initials);
     } else {
@@ -39,10 +39,10 @@ const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({ userData, cla
       const storedLastName = localStorage.getItem('lastName') || '';
       const storedDisplayName = localStorage.getItem('displayName') || '';
       const verifiedPhone = localStorage.getItem('verifiedPhone') || '';
-      
+
       let displayName = '';
       let initials = '';
-      
+
       if (storedDisplayName) {
         displayName = storedDisplayName;
         initials = storedDisplayName.charAt(0).toUpperCase();
@@ -53,7 +53,7 @@ const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({ userData, cla
         displayName = verifiedPhone || 'User';
         initials = 'U';
       }
-      
+
       setUserName(displayName);
       setUserInitials(initials);
     }
@@ -62,10 +62,10 @@ const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({ userData, cla
   const handleMenuClick: MenuProps['onClick'] = ({ key }) => {
     switch (key) {
       case 'dashboard':
-        router.push('/Dashboard');
+        router.push('/CustomerDashboard');
         break;
-      case 'settings':
-        router.push('/settings');
+      case 'profile':
+        router.push('/Profile');
         break;
       case 'logout':
         handleLogout();
@@ -114,14 +114,10 @@ const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({ userData, cla
     },
     {
       key: 'dashboard',
-      label: 'Dashboard',
-      icon: <DashboardOutlined />,
+      label: 'Manage my profile',
+      icon: <UserOutlined />,
     },
-    {
-      key: 'settings',
-      label: 'Settings',
-      icon: <SettingOutlined />,
-    },
+   
     {
       type: 'divider' as const,
     },
