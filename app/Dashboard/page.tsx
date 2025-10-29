@@ -12,6 +12,7 @@ import ManageConversations from './ManageConversation';
 
 function DashboardContent() {
   const [activeView, setActiveView] = useState('dashboard');
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const searchParams = useSearchParams();
 
   // Handle URL parameters for direct navigation
@@ -26,6 +27,13 @@ function DashboardContent() {
     console.log('Dashboard received navigation request to:', view);
     setActiveView(view);
   };
+
+  const handleSidebarCollapseChange = (isCollapsed: boolean) => {
+    setSidebarCollapsed(isCollapsed);
+  };
+
+  // Calculate sidebar width based on collapse state
+  const sidebarWidth = sidebarCollapsed ? 80 : 256;
 
   const renderContent = () => {
     console.log('Rendering content for activeView:', activeView);
@@ -49,18 +57,19 @@ function DashboardContent() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-orange-50 overflow-hidden">
       {/* Header */}
-      <Header />
-      
+      <Header sidebarWidth={sidebarWidth} />
+
       {/* Main Layout Container */}
-      <div 
+      <div
         className="flex flex-1 overflow-hidden"
-    
+
       >
         {/* Sidebar */}
         <div className="flex-shrink-0">
           <Sidebar
             onNavigate={handleNavigate}
             activeComponent={activeView}
+            onCollapseChange={handleSidebarCollapseChange}
           />
         </div>
         

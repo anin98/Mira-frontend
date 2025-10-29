@@ -14,6 +14,7 @@ interface SidebarProps {
   className?: string;
   onNavigate: (view: string) => void;
   activeComponent: string;
+  onCollapseChange?: (isCollapsed: boolean) => void;
 }
 
 interface MenuItem {
@@ -24,10 +25,11 @@ interface MenuItem {
   description?: string;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ 
-  className = '', 
-  onNavigate, 
-  activeComponent 
+const Sidebar: React.FC<SidebarProps> = ({
+  className = '',
+  onNavigate,
+  activeComponent,
+  onCollapseChange
 }) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
@@ -72,7 +74,9 @@ const Sidebar: React.FC<SidebarProps> = ({
   ];
 
   const toggleSidebar = () => {
-    setIsCollapsed(!isCollapsed);
+    const newCollapsedState = !isCollapsed;
+    setIsCollapsed(newCollapsedState);
+    onCollapseChange?.(newCollapsedState);
   };
 
   const toggleMobileSidebar = () => {

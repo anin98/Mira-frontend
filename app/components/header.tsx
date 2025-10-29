@@ -21,7 +21,7 @@ interface UserData {
 }
 
 // Company Header Component
-const CompanyHeader: React.FC<{ companyData: CompanyData }> = ({ companyData }) => {
+const CompanyHeader: React.FC<{ companyData: CompanyData; sidebarWidth?: number }> = ({ companyData, sidebarWidth = 0 }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [companyDropdownOpen, setCompanyDropdownOpen] = useState(false);
 
@@ -41,8 +41,14 @@ const CompanyHeader: React.FC<{ companyData: CompanyData }> = ({ companyData }) 
   };
 
   return (
-    <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <header
+      className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-40 transition-all duration-300"
+      style={{
+        marginLeft: sidebarWidth > 0 ? `${sidebarWidth}px` : '0',
+        width: sidebarWidth > 0 ? `calc(100% - ${sidebarWidth}px)` : '100%'
+      }}
+    >
+      <div className="max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
           <div className="flex items-center">
@@ -50,8 +56,8 @@ const CompanyHeader: React.FC<{ companyData: CompanyData }> = ({ companyData }) 
               <Image
                 src="/mira-ai.png"
                 alt="Mira AI Logo"
-                width={150}
-                height={37}
+               width={150}
+                height={50}
                 className="h-10 w-auto"
                 priority
               />
@@ -223,7 +229,11 @@ const CompanyHeader: React.FC<{ companyData: CompanyData }> = ({ companyData }) 
   );
 };
 
-const Header: React.FC = () => {
+interface HeaderProps {
+  sidebarWidth?: number;
+}
+
+const Header: React.FC<HeaderProps> = ({ sidebarWidth = 0 }) => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [companyData, setCompanyData] = useState<CompanyData | null>(null);
@@ -428,7 +438,7 @@ const Header: React.FC = () => {
 
   // If company is logged in, show company header
   if (companyData) {
-    return <CompanyHeader companyData={companyData} />;
+    return <CompanyHeader companyData={companyData} sidebarWidth={sidebarWidth} />;
   }
 
   const toggleMobileMenu = () => {
@@ -454,8 +464,14 @@ const Header: React.FC = () => {
   // Show loading state briefly
   if (isLoading) {
     return (
-      <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <header
+        className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-40 transition-all duration-300"
+        style={{
+          marginLeft: sidebarWidth > 0 ? `${sidebarWidth}px` : '0',
+          width: sidebarWidth > 0 ? `calc(100% - ${sidebarWidth}px)` : '100%'
+        }}
+      >
+        <div className="max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             {/* Logo */}
             <div className="flex items-center">
@@ -463,8 +479,8 @@ const Header: React.FC = () => {
                 <Image
                   src="/mira-ai.png"
                   alt="Mira AI Logo"
-                  width={150}
-                  height={37}
+                width={150}
+                height={50}
                   className="h-10 w-auto"
                   priority
                 />
@@ -482,8 +498,14 @@ const Header: React.FC = () => {
   }
 
   return (
-    <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <header
+      className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-40 transition-all duration-300"
+      style={{
+        marginLeft: sidebarWidth > 0 ? `${sidebarWidth}px` : '0',
+        width: sidebarWidth > 0 ? `calc(100% - ${sidebarWidth}px)` : '100%'
+      }}
+    >
+      <div className="max-w-7xl  px-4 sm:px-4 lg:px-6">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
           <div className="flex items-center">
@@ -493,7 +515,7 @@ const Header: React.FC = () => {
                 alt="Mira AI Logo"
                 width={150}
                 height={50}
-              
+
                 priority
               />
             </Link>

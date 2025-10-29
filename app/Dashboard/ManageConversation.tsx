@@ -254,12 +254,12 @@ const ManageConversations: React.FC = () => {
     try {
       setLoading(true);
       clearMessages();
-      
+
       const response = await fetch(`${API_BASE}/dashboard/inbox/`, {
         method: 'GET',
         headers: getAuthHeaders(),
       });
-      
+
       if (!response.ok) {
         if (response.status === 401) {
           localStorage.removeItem('access_token');
@@ -270,25 +270,66 @@ const ManageConversations: React.FC = () => {
         }
         throw new Error(`Failed to fetch conversations: ${response.status}`);
       }
-      
+
       const data: InboxResponse[] = await response.json();
-      
+
       // Map inbox data to conversations format
-      const mappedConversations: Conversation[] = data.map((item) => ({
-        id: item.session_id || item.id || '',
-        session_id: item.session_id || item.id,
-        customer_name: item.customer_name || 'Unknown Customer',
-        customer_phone: item.customer_phone || 'No phone',
-        status: (item.status as 'active' | 'closed' | 'autopilot') || 'active',
-        created_at: item.created_at || new Date().toISOString(),
-        updated_at: item.updated_at || new Date().toISOString(),
-        message_count: item.message_count || 0,
-        last_message: item.last_message || 'No messages',
-        mode: (item.mode as 'manual' | 'autopilot') || 'manual',
-      }));
-      
+      const mappedConversations: Conversation[] = data.map((item) => {
+        const sessionId = item.session_id || item.id || '';
+
+        return {
+          id: sessionId,
+          session_id: sessionId,
+          customer_name: item.customer_name || 'Unknown Customer',
+          customer_phone: item.customer_phone || 'No phone',
+          status: (item.status as 'active' | 'closed' | 'autopilot') || 'active',
+          created_at: item.created_at || new Date().toISOString(),
+          updated_at: item.updated_at || new Date().toISOString(),
+          message_count: item.message_count || 0,
+          last_message: item.last_message || 'No messages',
+          mode: (item.mode as 'manual' | 'autopilot') || 'manual',
+        };
+      });
+
       setConversations(mappedConversations);
-      
+
+      // Fetch last messages for all conversations in parallel
+      const conversationsWithMessages = await Promise.all(
+        mappedConversations.map(async (conv) => {
+          const sessionId = conv.session_id || conv.id;
+          let lastMessage = conv.last_message;
+
+          if (sessionId) {
+            try {
+              const messagesResponse = await fetch(`${API_BASE}/dashboard/${sessionId}/messages-latest/`, {
+                method: 'GET',
+                headers: getAuthHeaders(),
+              });
+
+              if (messagesResponse.ok) {
+                const messages = await messagesResponse.json();
+                console.log(`Messages for ${sessionId}:`, messages); // Debug log
+
+                if (Array.isArray(messages) && messages.length > 0) {
+                  // messages-latest returns newest first, so take the first one
+                  const latestMsg = messages[0];
+                  lastMessage = latestMsg?.content || latestMsg?.message || conv.last_message || 'No messages';
+                }
+              }
+            } catch (err) {
+              console.error(`Error fetching last message for session ${sessionId}:`, err);
+            }
+          }
+
+          return {
+            ...conv,
+            last_message: lastMessage
+          };
+        })
+      );
+
+      setConversations(conversationsWithMessages);
+
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to fetch conversations';
       showError(errorMessage);
@@ -317,18 +358,28 @@ const ManageConversations: React.FC = () => {
       const data = await response.json();
 
       // Map the new API response format to our Message type
+      // Reverse the array since messages-latest returns newest first, but we want oldest first
       const messages: Message[] = Array.isArray(data) ? data.map((msg: {
         id?: number;
         content: string;
         role: string;
         created_at: string;
-      }) => ({
-        id: msg.id,
-        content: msg.content,
-        sender: msg.role === 'user' ? 'user' : msg.role === 'assistant' ? 'ai' : msg.role === 'suggestion' ? 'ai' : 'agent',
-        timestamp: msg.created_at,
-        message_type: 'text'
-      })) : [];
+      }) => {
+        let sender: 'user' | 'agent' | 'ai' = 'agent';
+        if (msg.role === 'user') {
+          sender = 'user';
+        } else if (msg.role === 'assistant' || msg.role === 'suggestion') {
+          sender = 'ai';
+        }
+
+        return {
+          id: msg.id,
+          content: msg.content,
+          sender,
+          timestamp: msg.created_at,
+          message_type: 'text' as const
+        };
+      }).reverse() : [];
 
       // Update selected conversation with messages
       setSelectedConversation(prev => {
@@ -376,37 +427,22 @@ const ManageConversations: React.FC = () => {
         headers: getAuthHeaders(),
         body: JSON.stringify({
           session_id: sessionId,
-          message: messageContent,
-          sender: 'agent'
+          content: messageContent
         }),
       });
       
       if (!response.ok) {
         throw new Error(`Failed to send message: ${response.status}`);
       }
-      
-      const result = await response.json();
-      
-      // Add message to UI immediately for better UX
-      const newMsg: Message = {
-        id: result.id || Date.now(),
-        content: messageContent,
-        sender: 'agent',
-        timestamp: new Date().toISOString(),
-        message_type: 'text'
-      };
-      
-      setSelectedConversation(prev => {
-        if (!prev) return null;
-        return {
-          ...prev,
-          messages: [...(prev.messages || []), newMsg]
-        };
-      });
-      
+
+      await response.json();
+
       setNewMessage('');
       showSuccess('Message sent successfully');
-      
+
+      // Refresh messages to get both agent message and AI response
+      await fetchConversationDetails(sessionId);
+
       // Optionally refresh conversation list to update last_message
       await fetchConversations();
       
@@ -694,6 +730,20 @@ const ManageConversations: React.FC = () => {
                 <span className="text-xs text-gray-500">
                   {selectedConversation.message_count || 0} messages
                 </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const sessionId = selectedConversation.session_id || selectedConversation.id;
+                    if (sessionId) {
+                      fetchConversationDetails(sessionId);
+                    }
+                  }}
+                  disabled={conversationLoading}
+                  title="Refresh messages"
+                >
+                  <RefreshCw className={`w-4 h-4 ${conversationLoading ? 'animate-spin' : ''}`} />
+                </Button>
               </div>
             </div>
 
