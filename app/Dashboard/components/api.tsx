@@ -12,7 +12,11 @@ export interface Order {
   delivery_charge: number;
   total_amount: number;
   status: string;
-  customer: any; // nullable
+  customer: {
+    id?: number;
+    name?: string;
+    email?: string;
+  } | null;
   company: {
     id: number;
     user: {
@@ -111,7 +115,16 @@ class ApiService {
     return response.results || response.conversations || [];
   }
 
-  async getConversationDetails(id: string): Promise<any> {
+  async getConversationDetails(id: string): Promise<{
+    id: string;
+    customer_name?: string;
+    messages?: Array<{
+      id: number;
+      content: string;
+      sender: string;
+      timestamp: string;
+    }>;
+  }> {
     return this.fetchWithAuth(`/dashboard/${id}/conversation/`);
   }
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Header from '../components/header';
 import Sidebar from './sidebar';
@@ -10,9 +10,7 @@ import ManageCompany from './ManageCompany';
 import ManageAIPersona from './ManageAi';
 import ManageConversations from './ManageConversation';
 
-
-
-export default function DashboardPage() {
+function DashboardContent() {
   const [activeView, setActiveView] = useState('dashboard');
   const searchParams = useSearchParams();
 
@@ -74,5 +72,17 @@ export default function DashboardPage() {
         </main>
       </div>
     </div>
+  );
+}
+
+export default function DashboardPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-orange-50 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    }>
+      <DashboardContent />
+    </Suspense>
   );
 }

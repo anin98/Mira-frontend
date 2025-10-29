@@ -54,22 +54,22 @@ const CustomerRegistration: React.FC = () => {
   };
 
   // Check if profile is complete (name and email exist)
-  const isProfileComplete = (profileData: any) => {
+  const isProfileComplete = (profileData: { name?: string; email?: string; user?: { email?: string } }) => {
     const hasName = profileData.name?.trim();
     const hasEmail = profileData.email?.trim() || profileData.user?.email?.trim();
-    
+
     console.log('Profile completeness check:', {
       name: profileData.name,
       email: profileData.email,
       userEmail: profileData.user?.email,
       isComplete: hasName && hasEmail
     });
-    
+
     return hasName && hasEmail;
   };
 
   // Store auth data and trigger header update
-  const storeAuthData = (tokens: any, userIdFromApi: string) => {
+  const storeAuthData = (tokens: { access: string; refresh: string }, userIdFromApi: string) => {
     console.log('📦 Storing auth data...', { tokens, userIdFromApi });
     
     // Clear any existing data first
@@ -99,7 +99,17 @@ const CustomerRegistration: React.FC = () => {
   };
 
   // Store complete profile data
-  const storeProfileData = (profileData: any) => {
+  const storeProfileData = (profileData: {
+    id?: number;
+    name?: string;
+    email?: string;
+    phone_number?: string;
+    user?: {
+      first_name?: string;
+      last_name?: string;
+      email?: string;
+    };
+  }) => {
     console.log('📦 Storing profile data:', profileData);
     
     localStorage.setItem('customerId', profileData.id?.toString() || '');

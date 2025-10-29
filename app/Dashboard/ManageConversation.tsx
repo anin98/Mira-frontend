@@ -317,7 +317,12 @@ const ManageConversations: React.FC = () => {
       const data = await response.json();
 
       // Map the new API response format to our Message type
-      const messages: Message[] = Array.isArray(data) ? data.map((msg: any) => ({
+      const messages: Message[] = Array.isArray(data) ? data.map((msg: {
+        id?: number;
+        content: string;
+        role: string;
+        created_at: string;
+      }) => ({
         id: msg.id,
         content: msg.content,
         sender: msg.role === 'user' ? 'user' : msg.role === 'assistant' ? 'ai' : msg.role === 'suggestion' ? 'ai' : 'agent',
@@ -480,6 +485,7 @@ const ManageConversations: React.FC = () => {
   // Initial load
   useEffect(() => {
     fetchConversations();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Refresh conversations every 30 seconds
@@ -489,6 +495,7 @@ const ManageConversations: React.FC = () => {
     }, 30000);
 
     return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (

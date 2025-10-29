@@ -1,16 +1,13 @@
 // components/Dashboard/Sidebar.tsx
 'use client';
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import { Badge } from 'antd';
-import { 
-  MessageCircle, 
-  Package, 
-  Settings, 
+import {
+  MessageCircle,
+  Package,
+  Settings,
   User,
-  Home,
-  Menu,
-  X
+  LucideIcon
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -23,7 +20,7 @@ interface SidebarProps {
 interface NavigationItem {
   title: string;
   route: string;
-  icon: React.ComponentType<{ size?: number; className?: string }>;
+  icon: LucideIcon;
   description: string;
   badge?: number;
 }
@@ -38,7 +35,6 @@ export default function DashboardSidebar({
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
   const [unreadCount, setUnreadCount] = useState<number>(0);
   const [isCollapsed, setIsCollapsed] = useState<boolean>(false);
-  const router = useRouter();
 
   useEffect(() => {
     if (activeComponent) {

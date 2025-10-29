@@ -298,7 +298,7 @@ const ManageCompany: React.FC = () => {
   };
 
   // Handle form field changes
-  const handleFieldChange = (field: keyof Company, value: any) => {
+  const handleFieldChange = <K extends keyof Company>(field: K, value: Company[K]) => {
     if (!company) return;
     setCompany({
       ...company,
@@ -320,6 +320,7 @@ const ManageCompany: React.FC = () => {
 
   useEffect(() => {
     fetchCompany();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   if (loading) {
@@ -563,21 +564,21 @@ const ManageCompany: React.FC = () => {
                       name="delivery_scope"
                       value="dhaka_only"
                       checked={company.delivery_scope === 'dhaka_only'}
-                      onChange={(e) => handleFieldChange('delivery_scope', e.target.value)}
+                      onChange={(e) => handleFieldChange('delivery_scope', e.target.value as 'dhaka_only' | 'NATIONWIDE')}
                       className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
                       disabled={!isEditing}
                     />
                     <MapPin className="w-4 h-4 ml-2 mr-1 text-gray-500" />
                     <span className="text-sm text-gray-700">Dhaka Only</span>
                   </label>
-                  
+
                   <label className="flex items-center">
                     <input
                       type="radio"
                       name="delivery_scope"
                       value="NATIONWIDE"
                       checked={company.delivery_scope === 'NATIONWIDE'}
-                      onChange={(e) => handleFieldChange('delivery_scope', e.target.value)}
+                      onChange={(e) => handleFieldChange('delivery_scope', e.target.value as 'dhaka_only' | 'NATIONWIDE')}
                       className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
                       disabled={!isEditing}
                     />

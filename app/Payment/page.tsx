@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { ArrowLeft, CreditCard, Shield, Zap, Smartphone, AlertCircle, CheckCircle } from 'lucide-react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
@@ -22,7 +22,7 @@ interface CompanyPaymentMethod {
   credentials: {
     qr_code_url?: string;
     webhook_url?: string;
-    [key: string]: any;
+    [key: string]: string | undefined;
   };
   is_active: boolean;
   updated_at: string;
@@ -122,7 +122,7 @@ interface FormData {
   delivery_location: 'inside_dhaka' | 'outside_dhaka';
 }
 
-const Payment: React.FC = () => {
+const PaymentContent: React.FC = () => {
   const searchParams = useSearchParams();
   const selectedPlanFromUrl = searchParams?.get('plan') || 'standard';
   
@@ -290,6 +290,7 @@ const Payment: React.FC = () => {
   useEffect(() => {
     fetchPaymentGateways();
     fetchCompanyPaymentMethods();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -299,6 +300,7 @@ const Payment: React.FC = () => {
         setSelectedPlan(planFromUrl);
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
 
   return (
@@ -567,6 +569,18 @@ const Payment: React.FC = () => {
 
       <Footer />
     </div>
+  );
+};
+
+const Payment: React.FC = () => {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    }>
+      <PaymentContent />
+    </Suspense>
   );
 };
 

@@ -173,11 +173,18 @@ const MiraChatbot: React.FC = () => {
 
   // Set up global payment image function
   useEffect(() => {
-    (window as any).openPaymentImage = (url: string) => {
+    interface WindowWithPaymentFunctions extends Window {
+      openPaymentImage?: (url: string) => void;
+      markPaymentComplete?: () => void;
+    }
+
+    const win = window as WindowWithPaymentFunctions;
+
+    win.openPaymentImage = (url: string) => {
       setPaymentImageUrl(url || storedQRUrl);
     };
 
-    (window as any).markPaymentComplete = () => {
+    win.markPaymentComplete = () => {
       setPaymentCompleted(true);
       setStoredQRUrl("");
       setShowPaymentStatus(false);
@@ -187,8 +194,8 @@ const MiraChatbot: React.FC = () => {
     };
 
     return () => {
-      delete (window as any).openPaymentImage;
-      delete (window as any).markPaymentComplete;
+      delete win.openPaymentImage;
+      delete win.markPaymentComplete;
     };
   }, [storedQRUrl]);
 

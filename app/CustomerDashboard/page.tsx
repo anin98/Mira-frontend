@@ -265,7 +265,14 @@ const CustomerDashboard: React.FC = () => {
 
       if (response.ok) {
         const data = await response.json();
-        const sessions: ChatSession[] = (data.results || data.conversations || data || []).map((item: any) => ({
+        const sessions: ChatSession[] = (data.results || data.conversations || data || []).map((item: {
+          session_id?: string;
+          id?: string;
+          created_at?: string;
+          timestamp?: string;
+          message_count?: number;
+          last_message?: string;
+        }) => ({
           session_id: item.session_id || item.id,
           created_at: item.created_at || item.timestamp,
           message_count: item.message_count || 0,

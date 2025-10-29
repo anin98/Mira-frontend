@@ -115,14 +115,14 @@ const CompactCompanySignup: React.FC = () => {
 
   const validateStep = (step: number): boolean => {
     setError('');
-    
+
     switch (step) {
-      case 1:
+      case 1: {
         if (!formData.name || !formData.email || !formData.whatsapp_number) {
           setError('Please fill in all required fields');
           return false;
         }
-        
+
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailRegex.test(formData.email)) {
           setError('Please enter a valid email address');
@@ -135,16 +135,17 @@ const CompactCompanySignup: React.FC = () => {
           return false;
         }
         break;
-        
+      }
+
       case 2:
         // No required validation for step 2
         break;
-        
+
       case 3:
         // Final validation before submission
         break;
     }
-    
+
     return true;
   };
 
