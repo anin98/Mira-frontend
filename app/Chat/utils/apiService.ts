@@ -1,9 +1,9 @@
 import { ChatMessage, APIRequestData, ValidationError } from './chatIndex';
 
 export class APIService {
-  private PUBLIC_CLIENT_KEY = process.env.REACT_APP_PUBLIC_CLIENT_KEY || "15f1d1cb-b6a0-4133-9f5a-643a3affe291";
-  private COMPANY_ID_TO_TEST = 1;
-  private API_ENDPOINT = "https://mira-chat.grayscale-technologies.com/chat";
+  private PUBLIC_CLIENT_KEY = process.env.NEXT_PUBLIC_CLIENT_KEY || '';
+  private COMPANY_ID_TO_TEST = parseInt(process.env.NEXT_PUBLIC_COMPANY_ID || '1');
+  private API_ENDPOINT = `${process.env.NEXT_PUBLIC_BASE_URL || 'https://mira-chat.grayscale-technologies.com'}/chat`;
 
   async sendMessage(
     userMessage: string,

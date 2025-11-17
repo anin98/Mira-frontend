@@ -1,8 +1,8 @@
 // app/Chat/utils/auth.ts
 export const AUTH_CONFIG = {
   JWT_STORAGE_KEYS: ['jwt_token', 'access_token', 'authToken', 'token'],
-  CLIENT_KEY: process.env.NEXT_PUBLIC_MIRA_CLIENT_KEY || "",
-  API_URL: process.env.NEXT_PUBLIC_MIRA_API_URL || "https://mira-chat.grayscale-technologies.com/chat"
+  CLIENT_KEY: process.env.NEXT_PUBLIC_CLIENT_KEY || "",
+  API_URL: `${process.env.NEXT_PUBLIC_BASE_URL || "https://mira-chat.grayscale-technologies.com"}/chat`
 };
 
 export const getJWTToken = (): string | null => {

@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Header from '../components/header';
-import { MessageCircle, Edit3, History, User, Mail, Phone, MapPin, Plus } from 'lucide-react';
+import { MessageCircle, Edit3, User, Mail, Phone, MapPin } from 'lucide-react';
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
@@ -24,16 +24,8 @@ interface CustomerData {
   address: string;
 }
 
-interface ChatSession {
-  session_id: string;
-  created_at: string;
-  message_count: number;
-  last_message: string;
-}
-
 const CustomerDashboard: React.FC = () => {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<'profile' | 'history'>('profile');
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [isFetching, setIsFetching] = useState<boolean>(true);
   const [error, setError] = useState<string>('');
@@ -41,8 +33,6 @@ const CustomerDashboard: React.FC = () => {
   const [customerId, setCustomerId] = useState<string>('');
   const [userIdFromApi, setUserIdFromApi] = useState<number>(0);
   const [isEditing, setIsEditing] = useState<boolean>(false);
-  const [chatSessions, setChatSessions] = useState<ChatSession[]>([]);
-  const [loadingChatHistory, setLoadingChatHistory] = useState<boolean>(false);
 
   const [formData, setFormData] = useState({
     firstName: '',
@@ -236,62 +226,8 @@ const CustomerDashboard: React.FC = () => {
     }
   };
 
-  const startNewChat = () => {
+  const openChat = () => {
     router.push('/Chat');
-  };
-
-  // Fetch chat history when "Chat History" tab is active
-  useEffect(() => {
-    if (activeTab === 'history') {
-      fetchChatHistory();
-    }
-  }, [activeTab]);
-
-  const fetchChatHistory = async () => {
-    setLoadingChatHistory(true);
-    try {
-      const accessToken = localStorage.getItem('access_token');
-      if (!accessToken) {
-        setError('Authentication required');
-        return;
-      }
-
-      const response = await fetch('https://api.grayscale-technologies.com/api/dashboard/inbox/', {
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-          'Content-Type': 'application/json',
-        }
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        const sessions: ChatSession[] = (data.results || data.conversations || data || []).map((item: {
-          session_id?: string;
-          id?: string;
-          created_at?: string;
-          timestamp?: string;
-          message_count?: number;
-          last_message?: string;
-        }) => ({
-          session_id: item.session_id || item.id,
-          created_at: item.created_at || item.timestamp,
-          message_count: item.message_count || 0,
-          last_message: item.last_message || 'No messages yet'
-        }));
-        setChatSessions(sessions);
-      } else {
-        setError('Failed to load chat history');
-      }
-    } catch (err) {
-      console.error('Error fetching chat history:', err);
-      setError('Failed to load chat history');
-    } finally {
-      setLoadingChatHistory(false);
-    }
-  };
-
-  const openChat = (sessionId: string) => {
-    router.push(`/Chat?session_id=${sessionId}`);
   };
 
   if (isFetching) {
@@ -314,45 +250,27 @@ const CustomerDashboard: React.FC = () => {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Welcome Section */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Welcome back, {formData.name || 'User'}!
-          </h1>
-          <p className="text-gray-600">Manage your profile and view your chat history</p>
-        </div>
-
-        {/* Tab Navigation */}
-        <div className="mb-6 border-b border-gray-200">
-          <nav className="flex space-x-8">
-            <button
-              onClick={() => setActiveTab('profile')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
-                activeTab === 'profile'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              <User className="inline-block w-5 h-5 mr-2" />
-              Profile
-            </button>
-            <button
-              onClick={() => setActiveTab('history')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
-                activeTab === 'history'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              <History className="inline-block w-5 h-5 mr-2" />
-              Chat History
-            </button>
-          </nav>
+        <div className="mb-8 flex justify-between items-center">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">
+              Welcome back, {formData.name || 'User'}!
+            </h1>
+            <p className="text-gray-600">Manage your profile and chat with MIRA AI</p>
+          </div>
+          <Button
+            onClick={openChat}
+            className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg hover:shadow-xl transition-all duration-200"
+            size="lg"
+          >
+            <MessageCircle className="w-5 h-5 mr-2" />
+            Open Chat
+          </Button>
         </div>
 
         {/* Content Area */}
         <div className="bg-white rounded-2xl shadow-xl border border-gray-200 p-8">
-          {activeTab === 'profile' ? (
-            <>
+          {/* Profile Section */}
+          <>
               <div className="flex justify-between items-center mb-6">
                 <h2 className="text-2xl font-bold text-gray-900">Profile Information</h2>
                 {!isEditing && (
@@ -542,85 +460,18 @@ const CustomerDashboard: React.FC = () => {
                 </div>
               )}
             </>
-          ) : (
-            <>
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-2xl font-bold text-gray-900">Chat History</h2>
-                <Button
-                  onClick={startNewChat}
-                  className="bg-blue-600 hover:bg-blue-700 text-white"
-                >
-                  <Plus className="w-4 h-4 mr-2" />
-                  New Chat
-                </Button>
-              </div>
-
-              {loadingChatHistory ? (
-                <div className="text-center py-12">
-                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-                  <p className="text-gray-600">Loading chat history...</p>
-                </div>
-              ) : chatSessions.length === 0 ? (
-                <div className="text-center py-12">
-                  <MessageCircle className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                  <p className="text-gray-500 mb-4">Your chat history will appear here</p>
-                  <p className="text-sm text-gray-400">Start a conversation with Mira to see your history</p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {chatSessions.map((session) => (
-                    <div
-                      key={session.session_id}
-                      onClick={() => openChat(session.session_id)}
-                      className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 cursor-pointer transition-all duration-200 hover:shadow-md"
-                    >
-                      <div className="flex items-start justify-between">
-                        <div className="flex items-start space-x-3 flex-1">
-                          <MessageCircle className="w-5 h-5 text-blue-600 mt-1" />
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center justify-between mb-1">
-                              <p className="text-sm font-medium text-gray-900">
-                                Chat Session
-                              </p>
-                              <span className="text-xs text-gray-500">
-                                {new Date(session.created_at).toLocaleDateString('en-US', {
-                                  month: 'short',
-                                  day: 'numeric',
-                                  year: 'numeric',
-                                  hour: '2-digit',
-                                  minute: '2-digit'
-                                })}
-                              </span>
-                            </div>
-                            <p className="text-sm text-gray-600 truncate">
-                              {session.last_message}
-                            </p>
-                            <div className="flex items-center mt-2">
-                              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                                {session.message_count} {session.message_count === 1 ? 'message' : 'messages'}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </>
-          )}
         </div>
       </div>
 
-      {/* Floating New Chat Button */}
+      {/* Floating Chat Button */}
       <button
-        onClick={startNewChat}
+        onClick={openChat}
         className="fixed bottom-8 right-8 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-full p-4 shadow-2xl transition-all duration-300 transform hover:scale-110 z-50 group"
-        aria-label="Start new chat"
+        aria-label="Open chat with MIRA"
       >
-        <Plus className="w-6 h-6" />
+        <MessageCircle className="w-6 h-6" />
         <span className="absolute right-full mr-3 top-1/2 -translate-y-1/2 bg-gray-900 text-white px-3 py-2 rounded-lg text-sm whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-          Start New Chat
+          Chat with MIRA
         </span>
       </button>
     </div>

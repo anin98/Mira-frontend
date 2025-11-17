@@ -95,8 +95,8 @@ const Hero: React.FC = () => {
   return (
     <>
       {isNavigating && <LoadingAnimation fullScreen message="Redirecting to MIRA AI Chat..." />}
-      <section id="home" className=" min-h-screen flex items-center bg-gradient-to-br from-background via-muted/50 to-background">
-      <div className="max-w-7xl  px-4 sm:px-6 lg:px-8 py-20">
+      <section id="home" className="min-h-screen flex items-center bg-gradient-to-br from-background via-muted/50 to-background">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
         <div className="grid lg:grid-cols-2 gap-12 items-center">
           {/* Left Content */}
           <div className="space-y-8">
