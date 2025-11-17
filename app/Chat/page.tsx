@@ -262,49 +262,11 @@ const MiraChatbot: React.FC = () => {
   const abortController = useRef<AbortController | null>(null);
 
   // ==================== State ====================
-  const [messageHistory, setMessageHistory] = useState<Record<string, MessageType[]>>(() => {
-    // Initialize from localStorage
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('chat_message_history');
-      if (saved) {
-        try {
-          return JSON.parse(saved);
-        } catch (e) {
-          console.error('Error parsing saved message history:', e);
-        }
-      }
-    }
-    return {};
-  });
+  const [messageHistory, setMessageHistory] = useState<Record<string, MessageType[]>>({});
 
-  const [conversations, setConversations] = useState<ConversationType[]>(() => {
-    // Initialize from localStorage
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('chat_conversations');
-      if (saved) {
-        try {
-          const parsed = JSON.parse(saved);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            return parsed;
-          }
-        } catch (e) {
-          console.error('Error parsing saved conversations:', e);
-        }
-      }
-    }
-    return DEFAULT_CONVERSATIONS_ITEMS;
-  });
+  const [conversations, setConversations] = useState<ConversationType[]>(DEFAULT_CONVERSATIONS_ITEMS);
 
-  const [curConversation, setCurConversation] = useState(() => {
-    // Initialize from localStorage
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('chat_current_conversation');
-      if (saved) {
-        return saved;
-      }
-    }
-    return DEFAULT_CONVERSATIONS_ITEMS[0].key;
-  });
+  const [curConversation, setCurConversation] = useState(DEFAULT_CONVERSATIONS_ITEMS[0].key);
 
   const [inputValue, setInputValue] = useState('');
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -442,11 +404,10 @@ const MiraChatbot: React.FC = () => {
 
           for (let i = 0; i < fullText.length; i += charsPerUpdate) {
             accumulatedText = fullText.slice(0, Math.min(i + charsPerUpdate, fullText.length));
-            onUpdate({
-              data: JSON.stringify({
-                role: 'assistant',
-                content: accumulatedText,
-              }),
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            (onUpdate as any)({
+              content: accumulatedText,
+              role: 'assistant',
             });
 
             // Small delay between updates for smooth typewriting effect
@@ -495,9 +456,9 @@ const MiraChatbot: React.FC = () => {
   // Initialize with welcome message or load saved messages
   useEffect(() => {
     // Load messages when conversation changes
-    if (messageHistory[curConversation]) {
+    if (messageHistory[curConversation] && messageHistory[curConversation].length > 0) {
       setMessages(messageHistory[curConversation]);
-    } else {
+    } else if (messages.length === 0) {
       // Initialize with welcome message only if no saved messages
       setMessages([
         {
@@ -506,12 +467,12 @@ const MiraChatbot: React.FC = () => {
             role: 'assistant'
           },
           id: 'welcome',
-          status: 'success'
+          status: 'success' as MessageStatus
         }
       ]);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [curConversation, messageHistory]);
+  }, [curConversation]);
 
   // ==================== Event Handlers ====================
   const onSubmit = (val: string) => {
@@ -635,15 +596,16 @@ const MiraChatbot: React.FC = () => {
 
   const chatList = (
     <div className={styles.chatList}>
-      {messages?.length > 1 ? (
+      {messages?.length > 0 ? (
         <Bubble.List
           items={messages?.map((i) => ({
-            ...i.message,
+            role: i.message?.role || 'assistant',
+            content: i.message?.content || '',
             key: i.id,
             classNames: {
               content: i.status === 'loading' ? styles.loadingMessage : '',
             },
-            typing: i.message.role === 'assistant' && i.status === 'loading' ? { step: 3, interval: 20 } : false,
+            typing: i.message?.role === 'assistant' && i.status === 'loading' ? { step: 3, interval: 20 } : false,
             variant: 'shadow',
           }))}
           style={{ height: '100%', paddingInline: 'calc((100% - 700px) / 2)' }}
